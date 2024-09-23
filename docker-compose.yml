@@ -54,9 +54,10 @@ services:
   tools:
     image: cnfldemos/tools:0.3
     hostname: tools
+    user: root
     container_name: tools
     volumes:
-      - ./scripts/helper:/tmp/helper
+      - ./scripts/helper:/confluent/helper
       - ./scripts/security:/etc/kafka/secrets
     entrypoint: /bin/bash
     tty: true
@@ -78,6 +79,7 @@ services:
   kafka1:
     image: ${REPOSITORY}/cp-server:${CONFLUENT_DOCKER_TAG}
     hostname: kafka1
+    user: root
     container_name: kafka1
     healthcheck:
       test: curl --user superUser:superUser -fail --silent --insecure https://kafka1:8091/kafka/v3/clusters/ --output /dev/null || exit 1
@@ -272,6 +274,7 @@ services:
   kafka2:
     image: ${REPOSITORY}/cp-server:${CONFLUENT_DOCKER_TAG}
     hostname: kafka2
+    user: root
     container_name: kafka2
     healthcheck:
       test: curl -u superUser:superUser -fail --silent --insecure https://kafka2:8092/kafka/v3/clusters/ --output /dev/null || exit 1

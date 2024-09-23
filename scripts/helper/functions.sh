@@ -114,7 +114,17 @@ clean_demo_env()
 
 check_num_certs() {
   local DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
-  NUM_CERTS=$(docker run --rm -v "$DIR/../security:/etc/kafka/secrets" localbuild/connect:${CONFLUENT_DOCKER_TAG}-${CONNECTOR_VERSION} \
+  
+  uname=$(uname -s)
+  case "$uname" in
+    Linux*)     secdir="${DIR}/../security";;
+    Darwin*)    secdir="${DIR}/../security";;
+    CYGWIN*)    secdir="/${DIR}/../security";;
+    MINGW*)     secdir="/${DIR}/../security";;
+    MSYS_NT*)   secdir="/${DIR}/../security";;
+    *)          secdir="${DIR}/../security";;
+  esac
+  NUM_CERTS=$(docker run --rm -v "${secdir}:/etc/kafka/secrets" localbuild/connect:${CONFLUENT_DOCKER_TAG}-${CONNECTOR_VERSION} \
     keytool --list --keystore /etc/kafka/secrets/kafka.connect.truststore.jks --storepass confluent | grep trusted | wc -l)
   if [[ "$NUM_CERTS" -eq "1" ]]; then
     return 1
@@ -126,28 +136,37 @@ create_certificates()
 {
   local DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
+  uname=$(uname -s)
+  case "$uname" in
+    Linux*)     secdir="${DIR}/../security";;
+    Darwin*)    secdir="${DIR}/../security";;
+    CYGWIN*)    secdir="/${DIR}/../security";;
+    MINGW*)     secdir="/${DIR}/../security";;
+    MSYS_NT*)   secdir="/${DIR}/../security";;
+    *)          secdir="${DIR}/../security";;
+  esac
   # Generate keys and certificates used for SSL
-  echo -e "Generate keys and certificates used for SSL (see ${DIR}/security)"
+  echo -e "Generate keys and certificates used for SSL (see ${secdir})"
   # Install findutils to be able to use 'xargs' in the certs-create.sh script
-  docker run -v "${DIR}/../security/:/etc/kafka/secrets/" -u0 $REPOSITORY/cp-server:${CONFLUENT_DOCKER_TAG} bash -c "yum -y install findutils; cd /etc/kafka/secrets && ./certs-create.sh && chown -R $(id -u $USER):$(id -g $USER) /etc/kafka/secrets"
+  docker run -v "${secdir}/:/etc/kafka/secrets/" -u0 $REPOSITORY/cp-server:${CONFLUENT_DOCKER_TAG} bash -c "yum -y install findutils; cd /etc/kafka/secrets && ./certs-create.sh && chown -R $(id -u $USER):$(id -g $USER) /etc/kafka/secrets"
   
   # Generating public and private keys for token signing
   echo "Generating public and private keys for token signing"
-  docker run -v "${DIR}/../security/:/etc/kafka/secrets/" -u0 $REPOSITORY/cp-server:${CONFLUENT_DOCKER_TAG} bash -c "mkdir -p /etc/kafka/secrets/keypair; openssl genrsa -out /etc/kafka/secrets/keypair/keypair.pem 2048; openssl rsa -in /etc/kafka/secrets/keypair/keypair.pem -outform PEM -pubout -out /etc/kafka/secrets/keypair/public.pem && chown -R $(id -u $USER):$(id -g $USER) /etc/kafka/secrets/keypair"
+  docker run -v "${secdir}/:/etc/kafka/secrets/" -u0 $REPOSITORY/cp-server:${CONFLUENT_DOCKER_TAG} bash -c "mkdir -p /etc/kafka/secrets/keypair; openssl genrsa -out /etc/kafka/secrets/keypair/keypair.pem 2048; openssl rsa -in /etc/kafka/secrets/keypair/keypair.pem -outform PEM -pubout -out /etc/kafka/secrets/keypair/public.pem && chown -R $(id -u $USER):$(id -g $USER) /etc/kafka/secrets/keypair"
 
   # Enable Docker appuser to read files when created by a different UID
-  echo -e "Setting insecure permissions on some files in ${DIR}/../security for demo purposes\n"
-  chmod 644 "${DIR}/../security/keypair/keypair.pem"
-  chmod 644 "${DIR}/../security"/*.key
+  echo -e "Setting insecure permissions on some files in ${secdir} for demo purposes\n"
+  chmod 644 "${secdir%%//%/}/keypair/keypair.pem"
+  chmod 644 "${secdir%%//%/}"/*.key
 
   echo -e "INFO: Adding default java certificates to kafka.connect.truststore.jks to reach to Wikipedia over HTTPS"
-  docker run --name cert-runner -u root -v "$DIR/../security:/etc/kafka/secrets"  \
+  docker run --name cert-runner -u root -v "${secdir}:/etc/kafka/secrets"  \
     localbuild/connect:${CONFLUENT_DOCKER_TAG}-${CONNECTOR_VERSION} \
       keytool -importkeystore -srckeystore /usr/lib/jvm/zulu11-ca/lib/security/cacerts \
         -srcstorepass changeit -destkeystore /etc/kafka/secrets/kafka.connect.truststore.jks \
         -deststorepass confluent -keypass confluent
   
-  docker cp cert-runner:/etc/kafka/secrets/kafka.connect.truststore.jks "${DIR}/../security/kafka.connect.truststore.jks"
+  docker cp cert-runner:/etc/kafka/secrets/kafka.connect.truststore.jks "${secdir}/kafka.connect.truststore.jks"
   docker rm cert-runner
 }
 

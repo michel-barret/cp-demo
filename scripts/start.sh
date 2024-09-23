@@ -72,7 +72,7 @@ retry $MAX_WAIT host_check_up kafka1 || exit 1
 retry $MAX_WAIT host_check_up kafka2 || exit 1
 
 echo "Creating role bindings for principals"
-docker-compose exec tools bash -c "/tmp/helper/create-role-bindings.sh" || exit 1
+docker-compose exec tools bash -c "bash /confluent/helper/create-role-bindings.sh" || exit 1
 
 # Workaround for setting min ISR on topic _confluent-metadata-auth
 docker-compose exec kafka1 kafka-configs \
@@ -90,29 +90,12 @@ docker-compose up --no-recreate -d schemaregistry connect control-center
 
 echo
 echo -e "Create topics in Kafka cluster:"
-docker-compose exec tools bash -c "/tmp/helper/create-topics.sh" || exit 1
+docker-compose exec tools bash -c "bash /confluent/helper/create-topics.sh" || exit 1
 
 # Verify Kafka Connect Worker has started
 MAX_WAIT=240
 echo -e "\nWaiting up to $MAX_WAIT seconds for Connect to start"
 retry $MAX_WAIT host_check_up connect || exit 1
-
-#-------------------------------------------------------------------------------
-
-echo -e "\nStart streaming from the Wikipedia SSE source connector:"
-"${DIR}/connectors/submit_wikipedia_sse_config.sh" || exit 1
-
-# Verify connector is running
-MAX_WAIT=120
-echo
-echo "Waiting up to $MAX_WAIT seconds for connector to be in RUNNING state"
-retry $MAX_WAIT check_connector_status_running "wikipedia-sse" || exit 1
-
-# Verify wikipedia.parsed topic is populated and schema is registered
-MAX_WAIT=120
-echo
-echo -e "Waiting up to $MAX_WAIT seconds for subject wikipedia.parsed-value (for topic wikipedia.parsed) to be registered in Schema Registry"
-retry $MAX_WAIT host_check_schema_registered || exit 1
 
 #-------------------------------------------------------------------------------
 
@@ -130,31 +113,7 @@ echo
 #-------------------------------------------------------------------------------
 
 # Start more containers
-docker-compose up --no-recreate -d ksqldb-server ksqldb-cli restproxy
-
-# Verify ksqlDB server has started
-echo
-echo
-MAX_WAIT=120
-echo -e "\nWaiting up to $MAX_WAIT seconds for ksqlDB server to start"
-retry $MAX_WAIT host_check_up ksqldb-server || exit 1
-
-echo -e "\nRun ksqlDB queries:"
-"${DIR}/ksqlDB/run_ksqlDB.sh"
-
-if [[ "$VIZ" == "true" ]]; then
-  build_viz || exit 1
-fi
-
-echo -e "\nStart additional consumers to read from topics WIKIPEDIANOBOT, WIKIPEDIA_COUNT_GT_1"
-"${DIR}/consumers/listen_WIKIPEDIANOBOT.sh"
-"${DIR}/consumers/listen_WIKIPEDIA_COUNT_GT_1.sh"
-
-echo
-echo
-echo "Start the Kafka Streams application wikipedia-activity-monitor"
-docker-compose up --no-recreate -d streams-demo
-echo "..."
+docker-compose up --no-recreate -d restproxy
 
 
 #-------------------------------------------------------------------------------
