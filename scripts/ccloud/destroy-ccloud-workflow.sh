@@ -2,7 +2,7 @@
 
 VALIDATE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
-source ${VALIDATE_DIR}/../helper/functions.sh
+source "${VALIDATE_DIR}/../helper/functions.sh"
 
 verify_installed confluent || exit 1
 

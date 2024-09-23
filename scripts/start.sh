@@ -1,8 +1,8 @@
 #!/bin/bash
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
-source ${DIR}/helper/functions.sh
-source ${DIR}/env.sh
+source "${DIR}/helper/functions.sh"
+source "${DIR}/env.sh"
 
 #-------------------------------------------------------------------------------
 
@@ -10,7 +10,7 @@ source ${DIR}/env.sh
 preflight_checks || exit
 
 # Stop existing Docker containers
-${DIR}/stop.sh
+"${DIR}/stop.sh"
 
 CLEAN=${CLEAN:-false}
 
@@ -100,7 +100,7 @@ retry $MAX_WAIT host_check_up connect || exit 1
 #-------------------------------------------------------------------------------
 
 echo -e "\nStart streaming from the Wikipedia SSE source connector:"
-${DIR}/connectors/submit_wikipedia_sse_config.sh || exit 1
+"${DIR}/connectors/submit_wikipedia_sse_config.sh" || exit 1
 
 # Verify connector is running
 MAX_WAIT=120
@@ -123,7 +123,7 @@ echo "Waiting up to $MAX_WAIT seconds for Confluent Control Center to start"
 retry $MAX_WAIT host_check_up control-center || exit 1
 
 echo -e "\nConfluent Control Center modifications:"
-${DIR}/helper/control-center-modifications.sh
+"${DIR}/helper/control-center-modifications.sh"
 echo
 
 
@@ -140,15 +140,15 @@ echo -e "\nWaiting up to $MAX_WAIT seconds for ksqlDB server to start"
 retry $MAX_WAIT host_check_up ksqldb-server || exit 1
 
 echo -e "\nRun ksqlDB queries:"
-${DIR}/ksqlDB/run_ksqlDB.sh
+"${DIR}/ksqlDB/run_ksqlDB.sh"
 
 if [[ "$VIZ" == "true" ]]; then
   build_viz || exit 1
 fi
 
 echo -e "\nStart additional consumers to read from topics WIKIPEDIANOBOT, WIKIPEDIA_COUNT_GT_1"
-${DIR}/consumers/listen_WIKIPEDIANOBOT.sh
-${DIR}/consumers/listen_WIKIPEDIA_COUNT_GT_1.sh
+"${DIR}/consumers/listen_WIKIPEDIANOBOT.sh"
+"${DIR}/consumers/listen_WIKIPEDIA_COUNT_GT_1.sh"
 
 echo
 echo
@@ -172,11 +172,11 @@ echo -e "\nAvailable LDAP users:"
 curl -u mds:mds -X POST "https://localhost:8091/security/1.0/principals/User%3Amds/roles/UserAdmin" \
   -H "accept: application/json" -H "Content-Type: application/json" \
   -d "{\"clusters\":{\"kafka-cluster\":\"does_not_matter\"}}" \
-  --cacert ${DIR}/security/snakeoil-ca-1.crt --tlsv1.2
+  --cacert "${DIR}/security/snakeoil-ca-1.crt" --tlsv1.2
 curl -u mds:mds -X POST "https://localhost:8091/security/1.0/rbac/principals" --silent \
   -H "accept: application/json"  -H "Content-Type: application/json" \
   -d "{\"clusters\":{\"kafka-cluster\":\"does_not_matter\"}}" \
-  --cacert ${DIR}/security/snakeoil-ca-1.crt --tlsv1.2 | jq '.[]'
+  --cacert "${DIR}/security/snakeoil-ca-1.crt" --tlsv1.2 | jq '.[]'
 
 # Do poststart_checks
 poststart_checks

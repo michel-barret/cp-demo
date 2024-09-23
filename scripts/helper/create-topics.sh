@@ -3,7 +3,7 @@ set -euo pipefail
 IFS=$'\n\t'
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
-source ${DIR}/functions.sh
+source "${DIR}/functions.sh"
 
 KAFKA_CLUSTER_ID=$(get_kafka_cluster_id_from_container)
 
